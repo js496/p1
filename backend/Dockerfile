@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:23.10-py3
+FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04
 # Install necessary dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \

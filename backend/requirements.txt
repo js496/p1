@@ -3,4 +3,5 @@ uvicorn
 docker
 redis
 pynvml
+opencv-python
 vllm
