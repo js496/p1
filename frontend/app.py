@@ -514,7 +514,7 @@ with gr.Blocks() as app:
     btn_dl = gr.Button("Download", visible=True)
     btn_dl2 = gr.Button("Change Docker", visible=True)
     btn_dl3 = gr.Button("Change vLLM", visible=True)
-    btn_dl4 = gr.Button("Generate", visible=True)
+    # btn_dl4 = gr.Button("Generate", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads],selected_model_container_name).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(lambda: gr.update(visible=True), None, selected_model_pipeline_tag).then(lambda: gr.update(visible=True), None, selected_model_transformers).then(lambda: gr.update(visible=True), None, selected_model_private).then(lambda: gr.update(visible=True), None, selected_model_downloads).then(lambda: gr.update(visible=True), None, selected_model_size).then(lambda: gr.update(visible=True), None, selected_model_gated).then(lambda: gr.update(visible=True), None, port_model).then(lambda current_value: current_value + 1, port_model, port_model).then(lambda: gr.update(visible=True), None, port_vllm).then(lambda current_value: current_value + 1, port_vllm, port_vllm).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl])
 
@@ -741,6 +741,6 @@ with gr.Blocks() as app:
     
     btn_dl3.click(lambda: gr.update(label="Building vLLM container 3",visible=True), None, create_response).then(docker_api_update,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)    
     
-    btn_dl4.click(docker_api,['generate',generate_textbox],outputs=out_generate)
+    # btn_dl4.click(docker_api,['generate',generate_textbox],outputs=out_generate)
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
