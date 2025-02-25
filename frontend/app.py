@@ -135,6 +135,62 @@ def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return f'error docker_api_create'
 
+def docker_api_change(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
+    try:
+        req_container_name = str(req_model).replace('/', '_')
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
+        response_json = response.json()
+        
+        new_entry = [{
+            "gpu": 0,
+            "path": f'/home/cloud/.cache/huggingface/{req_model}',
+            "container": "0",
+            "container_status": "0",
+            "running_model": req_container_name,
+            "model": req_model,
+            "pipeline_tag": req_pipeline_tag,
+            "port_model": req_port_model,
+            "port_vllm": req_port_vllm
+        }]
+        r.set("db_gpu", json.dumps(new_entry))
+
+        print(response_json["result"])
+        if response_json["result"] == 200:
+            return f'{response_json["result_data"]}'
+        else:
+            return f'Create result ERR no container_id: {str(response_json)}'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'error docker_api_create'
+
+def docker_api_update(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
+    try:
+        req_container_name = str(req_model).replace('/', '_')
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
+        response_json = response.json()
+        
+        new_entry = [{
+            "gpu": 0,
+            "path": f'/home/cloud/.cache/huggingface/{req_model}',
+            "container": "0",
+            "container_status": "0",
+            "running_model": req_container_name,
+            "model": req_model,
+            "pipeline_tag": req_pipeline_tag,
+            "port_model": req_port_model,
+            "port_vllm": req_port_vllm
+        }]
+        r.set("db_gpu", json.dumps(new_entry))
+
+        print(response_json["result"])
+        if response_json["result"] == 200:
+            return f'{response_json["result_data"]}'
+        else:
+            return f'Create result ERR no container_id: {str(response_json)}'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'error docker_api_create'
+
 def search_models(query):
     try:
         global current_models_data    
@@ -375,6 +431,11 @@ def docker_api(req_type,req_model):
         if req_type == "logs":
             response = requests.post(BACKEND_URL, json={"req_method":"logs","req_model":req_model})
             res_json = response.json()
+            return f'{res_json["result_data"]}'            
+        
+        if req_type == "generate":
+            response = requests.post(BACKEND_URL, json={"req_method":"generate","req_str":"What is the capital of Australia?"})
+            res_json = response.json()
             return f'{res_json["result_data"]}'
         
         if req_type == "network":
@@ -443,7 +504,17 @@ with gr.Blocks() as app:
         port_vllm = gr.Number(value=8000,visible=False,label="Port of vLLM: ")
     
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
-    btn_dl = gr.Button("Download", visible=False)
+    
+        
+    generate_textbox = gr.Textbox(value="Put a prompt here", show_label=False, visible=True)
+            
+    out_generate = gr.Textbox(value="result", show_label=False, visible=True)
+    
+    
+    btn_dl = gr.Button("Download", visible=True)
+    btn_dl2 = gr.Button("Change Docker", visible=True)
+    btn_dl3 = gr.Button("Change vLLM", visible=True)
+    btn_dl4 = gr.Button("Generate", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads],selected_model_container_name).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(lambda: gr.update(visible=True), None, selected_model_pipeline_tag).then(lambda: gr.update(visible=True), None, selected_model_transformers).then(lambda: gr.update(visible=True), None, selected_model_private).then(lambda: gr.update(visible=True), None, selected_model_downloads).then(lambda: gr.update(visible=True), None, selected_model_size).then(lambda: gr.update(visible=True), None, selected_model_gated).then(lambda: gr.update(visible=True), None, port_model).then(lambda current_value: current_value + 1, port_model, port_model).then(lambda: gr.update(visible=True), None, port_vllm).then(lambda current_value: current_value + 1, port_vllm, port_vllm).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl])
 
@@ -535,9 +606,9 @@ with gr.Blocks() as app:
             )
 
 
-        gr.Markdown(f'### Container not running ({len(docker_container_list_bedrock)})')
+        gr.Markdown(f'### Container not running ({len(docker_container_list_not_running)})')
 
-        for current_container in docker_container_list_bedrock:
+        for current_container in docker_container_list_not_running:
             with gr.Row():                
                 container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container ID")
                 container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")    
@@ -665,5 +736,11 @@ with gr.Blocks() as app:
     timer_dl.tick(docker_api_network, create_response, timer_dl_box)
     
     btn_dl.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+    
+    btn_dl2.click(lambda: gr.update(label="Building vLLM container 2",visible=True), None, create_response).then(docker_api_change,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
+    
+    btn_dl3.click(lambda: gr.update(label="Building vLLM container 3",visible=True), None, create_response).then(docker_api_update,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)    
+    
+    btn_dl4.click(docker_api,['generate',generate_textbox],outputs=out_generate)
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
