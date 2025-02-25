@@ -1,5 +1,4 @@
 gradio
-dotenv
 transformers
 tokenizer
 pandas

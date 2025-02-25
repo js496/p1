@@ -7,6 +7,7 @@ services:
     environment:
       - CONTAINER_PORT=6379
       - HOST_PORT=6379
+      - MAX_JOBS=1
     restart: unless-stopped
   
   backend:
@@ -18,6 +19,7 @@ services:
     environment:
       - CONTAINER_PORT=7861
       - HOST_PORT=7861
+      - MAX_JOBS=1
     volumes:      
       - ./backend:/usr/src/app
       - ./backend/logs:/var/log
@@ -44,6 +46,7 @@ services:
       - GRADIO_SERVER_NAME=0.0.0.0
       - CONTAINER_PORT=7860
       - HOST_PORT=7860
+      - MAX_JOBS=1
     volumes:
       - ./frontend:/usr/src/app
       - ./frontend/logs:/var/log
@@ -56,6 +59,8 @@ services:
     restart: unless-stopped
 
   vllm:
+    build:
+      context: ./vllm
     image: vllm/vllm-openai:latest
     runtime: nvidia
     deploy:
@@ -70,22 +75,13 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
-      - /home/cloud/logs:/var/log
+      - /vllm/logs:/var/log
     environment:
-      - MAX_JOBS=1
+      - MAX_JOBS=2
+      - NCCL_DEBUG=INFO
     command: [
       "--model", "Qwen/Qwen2.5-1.5B-Instruct",
-      "--max-model-len", "8192",
-      "--cpu-offload-gb", "0",
-      "--enforce-eager",
-      "--enable-prefix-caching",
       "--tensor-parallel-size", "2",
-      "--kv-cache-dtype", "fp8",
       "--port", "1370",
-      "--swap-space", "2",
-      "--gpu-memory-utilization", "0.95",
-      "--served-model-name", "qwenz",
-      "--enable-chunked-prefill",
-      "--trust-remote-code"
     ]
     restart: unless-stopped
