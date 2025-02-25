@@ -15,6 +15,7 @@ WORKDIR /usr/src/app
 
 # Expose the port your app runs on
 EXPOSE 7861
+EXPOSE 1370
 
 # Command to run your application
 CMD ["python3", "app.py"]
