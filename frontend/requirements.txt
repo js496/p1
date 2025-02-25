@@ -6,3 +6,4 @@ torch
 redis
 huggingface_hub
 ffmpeg
+psutil
