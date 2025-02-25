@@ -6,8 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-setuptools ffmpeg libsm6 libxext6 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-    ccache software-properties-common git curl wget sudo vim python3-pip
-
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
