@@ -78,7 +78,6 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
-      - /vllm/logs:/var/log
     environment:
       - MAX_JOBS=1
       - NCCL_DEBUG=INFO
