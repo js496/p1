@@ -7,7 +7,6 @@ services:
     environment:
       - CONTAINER_PORT=6379
       - HOST_PORT=6379
-      - MAX_JOBS=1
     restart: unless-stopped
   
   backend:
@@ -18,8 +17,6 @@ services:
     container_name: container_backend
     environment:
       - CONTAINER_PORT=7861
-      - HOST_PORT=7861
-      - MAX_JOBS=1
     volumes:      
       - ./backend:/usr/src/app
       - ./backend/logs:/var/log
@@ -46,7 +43,6 @@ services:
       - GRADIO_SERVER_NAME=0.0.0.0
       - CONTAINER_PORT=7860
       - HOST_PORT=7860
-      - MAX_JOBS=1
     volumes:
       - ./frontend:/usr/src/app
       - ./frontend/logs:/var/log
@@ -62,7 +58,7 @@ services:
     build:
       context: ./vllm
       args:
-        - CUDA_VERSION=12.4.1
+        - CUDA_VERSION=12.4.0
         - PYTHON_VERSION=3.12
     image: vllm/vllm-openai:latest
     runtime: nvidia
@@ -80,9 +76,8 @@ services:
       - ./vllm/logs:/var/log
       - /root/models:/root/.cache/huggingface/hub
     environment:
-      - MAX_JOBS=4
       - NCCL_DEBUG=INFO
-      - CUDA_LAUNCH_BLOCKING=1
+      - NCCL_P2P_LEVEL=NVL
     command: [
       "--model", "Qwen/Qwen2.5-1.5B-Instruct",
       "--port", "1370",
