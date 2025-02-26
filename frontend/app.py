@@ -460,14 +460,14 @@ with gr.Blocks() as app:
             with gr.Row():            
                 logs_btn = gr.Button("Show Logs", scale=0)
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)     
-                
-                logs_btn.click(
-                    docker_api,
-                    inputs=['logs',container_id],
-                    outputs=[container_log_out]
-                ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
+
+                # logs_btn.click(
+                #     docker_api,
+                #     inputs=['logs',container_id],
+                #     outputs=[container_log_out]
+                # ).then(
+                #     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
+                # )
                 
                 logs_btn_close.click(
                     lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
@@ -521,13 +521,13 @@ with gr.Blocks() as app:
                 logs_btn = gr.Button("Show Logs", scale=0)
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
                 
-                logs_btn.click(
-                    docker_api,
-                    inputs=['logs',container_id],
-                    outputs=[container_log_out]
-                ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
+                # logs_btn.click(
+                #     docker_api,
+                #     inputs=['logs',container_id],
+                #     outputs=[container_log_out]
+                # ).then(
+                #     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
+                # )
                 
                 logs_btn_close.click(
                     lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
