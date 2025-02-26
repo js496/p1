@@ -312,7 +312,7 @@ async def docker_rest(request: Request):
 
                 global llm
                 llm = LLM(
-                    model=f'./models/{req_container_name}',
+                    model=req_data["req_model"],
                     tensor_parallel_size=1,
                     gpu_memory_utilization=0.80,
                 )
