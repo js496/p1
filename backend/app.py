@@ -308,11 +308,22 @@ async def docker_rest(request: Request):
 
         if req_data["req_method"] == "update":
             try:
-                req_container_name = str(req_data["req_model"]).replace('/', '_')
+
+                print(f'trying to update {req_data["req_model"]}...')
+                model_id_path = str(req_data["req_model"]).replace('/', '_')
+                print(f'model_id_path {model_id_path}...')
+                
+                selected_model_id_arr = str(req_data["req_model"]).split('/')
+                print(f'selected_model_id_arr {selected_model_id_arr}...')
+                
+                model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
+                print(f'model_id_path_default {model_id_path_default}...')
+                
 
                 global llm
                 llm = LLM(
-                    model=req_data["req_model"],
+                    model=model_id_path_default,
+                    local_dir=f'/root/.cache/huggingface/hub/{model_id_path_default}',
                     tensor_parallel_size=1,
                     gpu_memory_utilization=0.80,
                 )
