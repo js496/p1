@@ -430,9 +430,9 @@ with gr.Blocks() as app:
         [c for c in docker_container_list if c["State"]["Status"] == "running" and "name" in c and c["name"] not in ['container_redis', 'container_backend', 'container_frontend']]
 
         
-        docker_container_list_running =  [c for c in docker_container_list if c["State"]["Status"] == "running" and "name" in c and c["name"] not in ['container_redis', 'container_backend', 'container_frontend']]
-        docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running" and c["name"] != 'container_redis' and c["name"] != 'container_backend' and c["name"] != 'container_frontend']
-        docker_container_list_bedrock =  [c for c in docker_container_list if c["State"]["Status"] == "running" and "name" in c and c["name"] in ['container_redis', 'container_backend', 'container_frontend']]
+        docker_container_list_running =  [c for c in docker_container_list if c["State"]["Status"] == "running"]
+        docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
+        docker_container_list_bedrock =  [c for c in docker_container_list if c["State"]["Status"] == "running" and c["name"] in ['container_redis', 'container_backend', 'container_frontend']]
 
         def refresh_container():
             try:
