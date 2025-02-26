@@ -75,6 +75,7 @@ services:
               capabilities: [gpu]
     ports:
       - "1370:1370"
+    container_name: container_vllm
     volumes:
       - ./vllm/logs:/var/log
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
