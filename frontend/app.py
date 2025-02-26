@@ -260,9 +260,17 @@ def download_from_hf_hub(selected_model_id):
     try:
         print(f'trying to download {selected_model_id}...')
         model_id_path = str(selected_model_id).replace('/', '_')
+        print(f'model_id_path {model_id_path}...')
+        
+        selected_model_id_arr = str(selected_model_id).split('/')
+        print(f'selected_model_id_arr {selected_model_id_arr}...')
+        
+        model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
+        print(f'model_id_path_default {model_id_path_default}...')
+        
         model_path = snapshot_download(
             repo_id=selected_model_id,
-            local_dir=f'./models/{model_id_path}'
+            local_dir=f'/home/cloud/.cache/huggingface/hub/{model_id_path_default}'
         )
         return f'download result: {model_path}'
     except Exception as e:
@@ -513,7 +521,10 @@ with gr.Blocks() as app:
 
     inp.submit(search_models, inputs=inp, outputs=[model_dropdown]).then(lambda: gr.update(visible=True), None, model_dropdown)
     btn.click(search_models, inputs=inp, outputs=[model_dropdown]).then(lambda: gr.update(visible=True), None, model_dropdown)
-
+    
+    with gr.Row():
+        port_model = gr.Number(value=8001,visible=False,label="Port of model: ")
+        port_vllm = gr.Number(value=8000,visible=False,label="Port of vLLM: ")
 
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
     btn_dl = gr.Button("Download", visible=False)
