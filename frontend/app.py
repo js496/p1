@@ -430,7 +430,6 @@ with gr.Blocks() as app:
         
         docker_container_list_running =  [c for c in docker_container_list if c["State"]["Status"] == "running"]
         docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
-        docker_container_list_bedrock =  [c for c in docker_container_list if c["State"]["Status"] == "running" and c["name"] in c and c["name"] in ['container_redis', 'container_backend', 'container_frontend']]
 
         def refresh_container():
             try:
@@ -549,58 +548,7 @@ with gr.Blocks() as app:
                 """
             )
             
-        gr.Markdown(f'### Bedrock Container ({len(docker_container_list_bedrock)})')
 
-        for current_container in docker_container_list_bedrock:
-            with gr.Row():                
-                container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container ID")
-                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")    
-                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")                
-                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")            
-            with gr.Row():
-                container_log_out = gr.Textbox(value=[], lines=20, interactive=False, elem_classes="table-cell", show_label=False, visible=False)                
-            with gr.Row():
-                logs_btn = gr.Button("Show Logs", scale=0)
-                logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
-                
-                logs_btn.click(
-                    load_log_file,
-                    inputs=[f'{container_name[1:]}', 20],
-                    outputs=[container_log_out]
-                ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
-                
-                logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
-                                
-                start_btn = gr.Button("Start", scale=0)
-                delete_btn = gr.Button("Delete", scale=0, variant="stop")
-
-                start_btn.click(
-                    docker_api,
-                    inputs=["start",container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-
-                delete_btn.click(
-                    docker_api,
-                    inputs=["delete",container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-            
-            gr.Markdown(
-                """
-                <hr>
-                """
-            )
             
     def refresh_container_list():
         try:
