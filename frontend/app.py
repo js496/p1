@@ -304,11 +304,10 @@ def update_visibility_model_info():
 
 
 
-
-
-
-def docker_api(req_type,req_model):
+def docker_api(req_type,container_id_component):
+    
     try:
+        req_model = container_id_component.value
         if req_type == "list":
             response = requests.post(BACKEND_URL, json={"req_method":req_type})
             res_json = response.json()
@@ -457,14 +456,18 @@ with gr.Blocks() as app:
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
                 logs_btn.click(
                     docker_api,
-                    inputs=['logs',container_id],
+                    inputs=['logs', container_id],
                     outputs=[container_log_out]
                 ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
+                    lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], 
+                    None, 
+                    [logs_btn, logs_btn_close, container_log_out]
                 )
                 
                 logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
+                    lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], 
+                    None, 
+                    [logs_btn, logs_btn_close, container_log_out]
                 )
 
                 stop_btn = gr.Button("Stop", scale=0)
@@ -472,7 +475,7 @@ with gr.Blocks() as app:
 
                 stop_btn.click(
                     docker_api,
-                    inputs=['stop',container_id],
+                    inputs=['stop', container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -481,7 +484,7 @@ with gr.Blocks() as app:
 
                 delete_btn.click(
                     docker_api,
-                    inputs=['delete',container_id],
+                    inputs=['delete', container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -493,7 +496,6 @@ with gr.Blocks() as app:
                 <hr>
                 """
             )
-
 
         gr.Markdown(f'### Container not running ({len(docker_container_list_not_running)})')
 
@@ -511,14 +513,18 @@ with gr.Blocks() as app:
                 
                 logs_btn.click(
                     docker_api,
-                    inputs=['logs',container_id],
+                    inputs=['logs', container_id],
                     outputs=[container_log_out]
                 ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
+                    lambda: [gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], 
+                    None, 
+                    [logs_btn, logs_btn_close, container_log_out]
                 )
                 
                 logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
+                    lambda: [gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], 
+                    None, 
+                    [logs_btn, logs_btn_close, container_log_out]
                 )
                                 
                 start_btn = gr.Button("Start", scale=0)
@@ -526,7 +532,7 @@ with gr.Blocks() as app:
 
                 start_btn.click(
                     docker_api,
-                    inputs=['start',container_id],
+                    inputs=['start', container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -535,7 +541,7 @@ with gr.Blocks() as app:
 
                 delete_btn.click(
                     docker_api,
-                    inputs=['delete',container_id],
+                    inputs=['delete', container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -547,30 +553,6 @@ with gr.Blocks() as app:
                 <hr>
                 """
             )
-            
-
-            
-    def refresh_container_list():
-        try:
-            global docker_container_list
-            response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method": "list"})
-            docker_container_list = response.json()
-            return docker_container_list
-        except Exception as e:
-            print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-            return f'err {str(e)}'
-                 
-    def check_container_running(container_name):
-        try:
-            docker_container_list = docker_api('list','void')
-            docker_container_list_running = [c for c in docker_container_list if c["name"] == container_name]
-            if len(docker_container_list_running) > 0:
-                return f'Yes container is running!'
-        except Exception as e:
-            print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-            return f'err {str(e)}'
-    
-
 
 
 
