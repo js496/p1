@@ -270,7 +270,7 @@ def download_from_hf_hub(selected_model_id):
         
         model_path = snapshot_download(
             repo_id=selected_model_id,
-            local_dir=f'/root/models/{model_id_path_default}'
+            local_dir=f'/root/.cache/huggingface/hub/{model_id_path_default}'
         )
         return f'download result: {model_path}'
     except Exception as e:
