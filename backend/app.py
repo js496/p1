@@ -280,7 +280,7 @@ async def docker_rest(request: Request):
 
                 try:
                     model_index = command_list.index("--model") + 1
-                    command_list[model_index] = req_data["req_port_model"]
+                    command_list[model_index] = "1370"
                 except ValueError:
                     print("Error: --model not found in command")
                     return

@@ -420,7 +420,7 @@ def docker_api_change(req_model):
 
 def docker_api_update(req_model):
     try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_model":req_model})
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"update","req_model":req_model})
         res_json = response.json()
         return res_json
     except Exception as e:
