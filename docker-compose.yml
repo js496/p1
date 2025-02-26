@@ -75,6 +75,7 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /root/models:/root/.cache/huggingface/hub
+    shm_size: 4gb
     environment:
       - NCCL_DEBUG=INFO
       - NCCL_P2P_LEVEL=NVL
