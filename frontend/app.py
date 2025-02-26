@@ -342,10 +342,25 @@ def docker_api(req_type,container_id_component):
         logging.exception(f'Exception occured: {e}', exc_info=True)
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return e
+
+
+
     
-docker_container_list = docker_api('list','void') 
+def get_docker_container_list():
+    response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"list"})
+    res_json = response.json()
+
+    if response.status_code == 200:
+        return res_json
+    else:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'Error: {response.status_code}'
+
+docker_container_list = get_docker_container_list()
 
 
+print("docker_container_list")
+print(docker_container_list)
 
 
 
@@ -422,10 +437,9 @@ with gr.Blocks() as app:
     gpu_timer = gr.Timer(1,active=True)
     gpu_timer.tick(json_to_pd, outputs=gpu_dataframe)
     container_state = gr.State([])   
-    docker_container_list = docker_api('list','void')     
     @gr.render(inputs=container_state)
     def render_container(render_container_list):
-        docker_container_list = docker_api('list','void')
+        docker_container_list = get_docker_container_list()
         
         docker_container_list_running =  [c for c in docker_container_list if c["State"]["Status"] == "running"]
         docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
