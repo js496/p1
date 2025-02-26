@@ -58,7 +58,7 @@ services:
     build:
       context: ./vllm
       args:
-        - CUDA_VERSION=12.4.0
+        - CUDA_VERSION=12.4.1
         - PYTHON_VERSION=3.12
     image: vllm/vllm-openai:latest
     runtime: nvidia
