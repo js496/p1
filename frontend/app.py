@@ -460,39 +460,10 @@ with gr.Blocks() as app:
             with gr.Row():            
                 logs_btn = gr.Button("Show Logs", scale=0)
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)     
-
-                # logs_btn.click(
-                #     docker_api,
-                #     inputs=['logs',container_id],
-                #     outputs=[container_log_out]
-                # ).then(
-                #     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                # )
                 
-                logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
-
                 stop_btn = gr.Button("Stop", scale=0)
                 delete_btn = gr.Button("Delete", scale=0, variant="stop")
 
-                stop_btn.click(
-                    docker_api,
-                    inputs=['stop',container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-
-                delete_btn.click(
-                    docker_api,
-                    inputs=['delete',container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
                 
             gr.Markdown(
                 """
@@ -521,38 +492,12 @@ with gr.Blocks() as app:
                 logs_btn = gr.Button("Show Logs", scale=0)
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
                 
-                # logs_btn.click(
-                #     docker_api,
-                #     inputs=['logs',container_id],
-                #     outputs=[container_log_out]
-                # ).then(
-                #     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                # )
-                
-                logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
+
+            
                                 
                 start_btn = gr.Button("Start", scale=0)
                 delete_btn = gr.Button("Delete", scale=0, variant="stop")
 
-                start_btn.click(
-                    docker_api,
-                    inputs=['start',container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-
-                delete_btn.click(
-                    docker_api,
-                    inputs=['delete',container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
             
             gr.Markdown(
                 """
