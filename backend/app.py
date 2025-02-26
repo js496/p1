@@ -322,10 +322,7 @@ async def docker_rest(request: Request):
 
                 global llm
                 llm = LLM(
-                    model=model_id_path_default,
-                    local_dir=f'/root/.cache/huggingface/hub/{model_id_path_default}',
-                    tensor_parallel_size=1,
-                    gpu_memory_utilization=0.80,
+                    model=req_data["req_model"]
                 )
                 
                 return JSONResponse({"result": 200, "result_data": "Model updated successfully"})
