@@ -25,7 +25,7 @@ services:
       - ./backend/logs:/var/log
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
-      - ./models/:./models/
+      - ./models/:/models/
     depends_on:
       - redis
     deploy:
@@ -52,7 +52,7 @@ services:
       - ./frontend:/usr/src/app
       - ./frontend/logs:/var/log
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
-      - ./models/:./models/
+      - ./models/:/models/
     deploy:
       resources:
         reservations:
@@ -81,7 +81,7 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /home/cloud/.cache/huggingface:/root/.cache/huggingface
-      - ./models/:./models/
+      - ./models/:/models/
     environment:
       - MAX_JOBS=1
       - NCCL_DEBUG=INFO
