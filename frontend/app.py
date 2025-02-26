@@ -304,10 +304,9 @@ def update_visibility_model_info():
 
 
 
-def docker_api(req_type,container_id_component):
+def docker_api(req_type,req_model):
     
     try:
-        req_model = container_id_component.value
         if req_type == "list":
             response = requests.post(BACKEND_URL, json={"req_method":req_type})
             res_json = response.json()
@@ -320,6 +319,16 @@ def docker_api(req_type,container_id_component):
             
         if req_type == "logs":
             response = requests.post(BACKEND_URL, json={"req_method":"logs","req_model":req_model})
+            res_json = response.json()
+            return f'{res_json["result_data"]}'
+                    
+        if req_type == "change":
+            response = requests.post(BACKEND_URL, json={"req_method":"change","req_model":req_model})
+            res_json = response.json()
+            return f'{res_json["result_data"]}'
+                    
+        if req_type == "update":
+            response = requests.post(BACKEND_URL, json={"req_method":"update","req_model":req_model})
             res_json = response.json()
             return f'{res_json["result_data"]}'
         
@@ -490,6 +499,8 @@ with gr.Blocks() as app:
 
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
     btn_dl = gr.Button("Download", visible=False)
+    btn_dl2 = gr.Button("Change", visible=True)
+    btn_dl3 = gr.Button("Update", visible=True)
     
     model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_container_name]).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(update_visibility_model_info, None, [selected_model_pipeline_tag, selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_size,selected_model_gated]).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl]) 
     
@@ -664,6 +675,8 @@ with gr.Blocks() as app:
     timer_dl.tick(get_download_speed, outputs=timer_dl_box)
 
     btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
+    btn_dl2.click(docker_api, inputs=['change',model_dropdown], outputs=create_response)
+    btn_dl3.click(docker_api, inputs=['update',model_dropdown], outputs=create_response)
 
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
