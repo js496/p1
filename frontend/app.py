@@ -1,33 +1,34 @@
 import os
 import requests
 import json
-import subprocess
+import redis
+import pandas as pd
 import sys
 import ast
 import time
 from datetime import datetime
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
-import pandas as pd
 import huggingface_hub
-import redis
+from huggingface_hub import snapshot_download
 import gradio as gr
-import logging
+import threading
 import psutil
 
-logging.basicConfig(filename='logfile_container_frontend.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-def load_log_file(req_container,req_amount):
-    try:
-        with open(f'logfile_{req_container}.log', 'r') as file:
-            lines = file.readlines()
-            return ''.join(lines[-req_amount:])
-    except Exception as e:
-        return f'{e}'
 
 current_models_data = []
 db_gpu_data = []
 db_gpu_data_len = ''
-BACKEND_URL = f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest'
+
+def get_gpu_data():
+    try:
+        res_gpu_data_all = json.loads(r.get('db_gpu'))
+        res_gpu_data_current = res_gpu_data_all[0]
+        return res_gpu_data_all
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return e
+
 
 try:
     r = redis.Redis(host="redis", port=6379, db=0)
@@ -38,158 +39,9 @@ except Exception as e:
     print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
 
 
-def get_gpu_data():
-    try:
-        res_gpu_data_all = json.loads(r.get('db_gpu'))
-        res_gpu_data_current = res_gpu_data_all[0]
-        return res_gpu_data_all
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return e
-    
-def get_docker_container_list():
-    response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"list"})
-    res_json = response.json()
 
-    if response.status_code == 200:
-        return res_json
-    else:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'Error: {response.status_code}'
 
-docker_container_list = get_docker_container_list()
 
-def docker_api_logs(req_model):
-    try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"logs","req_model":req_model})
-        res_json = response.json()
-        return f'{res_json["result_data"]}'
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action stop'
-
-def docker_api_network(req_container_name):
-    try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"network","req_container_name":req_container_name})
-        res_json = response.json()
-        if res_json["result"] == 200:
-            return f'{res_json["result_data"]["networks"]["eth0"]["rx_bytes"]}'
-        else:
-            return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action network {res_json}'
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action network {e}'
-    
-def docker_api_start(req_model):
-    try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"start","req_model":req_model})
-        res_json = response.json()
-        return res_json
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action start {e}'
-
-def docker_api_stop(req_model):
-    try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"stop","req_model":req_model})
-        res_json = response.json()
-        return res_json
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action stop {e}'
-
-def docker_api_delete(req_model):
-    try:
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"delete","req_model":req_model})
-        res_json = response.json()
-        return res_json
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action delete {e}'
-
-def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
-    try:
-        req_container_name = str(req_model).replace('/', '_')
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"create","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
-        response_json = response.json()
-        
-        new_entry = [{
-            "gpu": 0,
-            "path": f'/home/cloud/.cache/huggingface/{req_model}',
-            "container": "0",
-            "container_status": "0",
-            "running_model": req_container_name,
-            "model": req_model,
-            "pipeline_tag": req_pipeline_tag,
-            "port_model": req_port_model,
-            "port_vllm": req_port_vllm
-        }]
-        r.set("db_gpu", json.dumps(new_entry))
-
-        print(response_json["result"])
-        if response_json["result"] == 200:
-            return f'{response_json["result_data"]}'
-        else:
-            return f'Create result ERR no container_id: {str(response_json)}'
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'error docker_api_create'
-
-def docker_api_change(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
-    try:
-        req_container_name = str(req_model).replace('/', '_')
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
-        response_json = response.json()
-        
-        new_entry = [{
-            "gpu": 0,
-            "path": f'/home/cloud/.cache/huggingface/{req_model}',
-            "container": "0",
-            "container_status": "0",
-            "running_model": req_container_name,
-            "model": req_model,
-            "pipeline_tag": req_pipeline_tag,
-            "port_model": req_port_model,
-            "port_vllm": req_port_vllm
-        }]
-        r.set("db_gpu", json.dumps(new_entry))
-
-        print(response_json["result"])
-        if response_json["result"] == 200:
-            return f'{response_json["result_data"]}'
-        else:
-            return f'Create result ERR no container_id: {str(response_json)}'
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'error docker_api_create'
-
-def docker_api_update(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
-    try:
-        req_container_name = str(req_model).replace('/', '_')
-        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_container_name":req_container_name,"req_model":req_model,"req_runtime":"nvidia","req_port_model":req_port_model,"req_port_vllm":req_port_vllm})
-        response_json = response.json()
-        
-        new_entry = [{
-            "gpu": 0,
-            "path": f'/home/cloud/.cache/huggingface/{req_model}',
-            "container": "0",
-            "container_status": "0",
-            "running_model": req_container_name,
-            "model": req_model,
-            "pipeline_tag": req_pipeline_tag,
-            "port_model": req_port_model,
-            "port_vllm": req_port_vllm
-        }]
-        r.set("db_gpu", json.dumps(new_entry))
-
-        print(response_json["result"])
-        if response_json["result"] == 200:
-            return f'{response_json["result_data"]}'
-        else:
-            return f'Create result ERR no container_id: {str(response_json)}'
-    except Exception as e:
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'error docker_api_create'
 
 def search_models(query):
     try:
@@ -362,6 +214,52 @@ def check_rx_change(current_rx_bytes):
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return f'Error rx_change_arr {str(e)}'
 
+
+def download_from_hf_hub(selected_model_id):
+    try:
+        print(f'trying to download {selected_model_id}...')
+        model_id_path = str(selected_model_id).replace('/', '_')
+        model_path = snapshot_download(
+            repo_id=selected_model_id,
+            local_dir=f'./models/{model_id_path}'
+        )
+        return f'download result: {model_path}'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'download error: {e}'
+
+prev_bytes_recv = 0
+def get_download_speed():
+    try:
+        global prev_bytes_recv
+        print(f'trying to get download speed ...')
+        net_io = psutil.net_io_counters()
+        bytes_recv = net_io.bytes_recv
+        download_speed = bytes_recv - prev_bytes_recv
+        prev_bytes_recv = bytes_recv
+        download_speed_kb = download_speed / 1024
+        download_speed_mbit_s = (download_speed * 8) / (1024 ** 2)      
+        bytes_received_mb = bytes_recv / (1024 ** 2)
+        return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb:.2f})'
+        # return f'{download_speed_kb:.2f} KB/s (total: {bytes_received_mb:.2f})'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'download error: {e}'
+
+def update_visibility_model_info():
+    return {
+        selected_model_pipeline_tag: gr.update(visible=True),
+        selected_model_transformers: gr.update(visible=True),
+        selected_model_private: gr.update(visible=True),
+        selected_model_downloads: gr.update(visible=True),
+        selected_model_size: gr.update(visible=True),
+        selected_model_gated: gr.update(visible=True)
+    }
+
+
+
+
+
 def json_to_pd():       
     rows = []
     try:
@@ -385,84 +283,62 @@ def json_to_pd():
     
     except Exception as e:
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return rows
-
-
-
-
-prev_bytes_recv = 0
-def get_total_download_speed():
-    try:
-        global prev_bytes_recv
-        net_io = psutil.net_io_counters()
-        bytes_recv = net_io.bytes_recv
-        download_speed = bytes_recv - prev_bytes_recv
-        prev_bytes_recv = bytes_recv
-        download_speed_kb = download_speed / 1024
-        download_speed_mbit_s = (download_speed * 8) / (1024 ** 2)      
-        bytes_received_mb = bytes_recv / (1024 ** 2)
-        return f'{download_speed_mbit_s:.2f} MBit/s (total: {bytes_received_mb:.2f})'
-    except Exception as e:
-        logging.exception(f'Exception occured: {e}', exc_info=True)
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return f'download error: {e}'
-
-def update_visibility_model_info():
-    return {
-        selected_model_pipeline_tag: gr.update(visible=True),
-        selected_model_transformers: gr.update(visible=True),
-        selected_model_private: gr.update(visible=True),
-        selected_model_downloads: gr.update(visible=True),
-        selected_model_size: gr.update(visible=True),
-        selected_model_gated: gr.update(visible=True)
-    }
-def docker_api(req_type,req_model):
-    try:
-        if req_type == "list":
-            response = requests.post(BACKEND_URL, json={"req_method":req_type})
-            res_json = response.json()
-            if response.status_code == 200:
-                return res_json
-            else:
-                logging.exception(f'Exception occurred', exc_info=True)
-                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-                return f'Error: {response.status_code}'
-            
-        if req_type == "logs":
-            response = requests.post(BACKEND_URL, json={"req_method":"logs","req_model":req_model})
-            res_json = response.json()
-            return f'{res_json["result_data"]}'            
-        
-        if req_type == "generate":
-            response = requests.post(BACKEND_URL, json={"req_method":"generate","req_str":"What is the capital of Australia?"})
-            res_json = response.json()
-            return f'{res_json["result_data"]}'
-        
-        if req_type == "network":
-            response = requests.post(BACKEND_URL, json={"req_method":"network","req_container_name":req_model})
-            res_json = response.json()
-            if res_json["result"] == 200:
-                return f'{res_json["result_data"]["networks"]["eth0"]["rx_bytes"]}'
-            else:
-                logging.exception(f'Exception occurred', exc_info=True)
-                return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error network {res_json}'
-        
-        if req_type == "start" or req_type == "stop" or req_type == "delete":
-            response = requests.post(BACKEND_URL, json={"req_method":{req_type},"req_model":req_model})
-            res_json = response.json()
-            return res_json
-        # ...
-           
-    except Exception as e:
-        logging.exception(f'Exception occured: {e}', exc_info=True)
-        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-        return e
     
+
+def docker_api_logs(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"logs","req_model":req_model})
+        res_json = response.json()
+        return f'{res_json["result_data"]}'
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action stop'
+def docker_api_start(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"start","req_model":req_model})
+        res_json = response.json()
+        return res_json
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action start {e}'
+
+def docker_api_stop(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"stop","req_model":req_model})
+        res_json = response.json()
+        return res_json
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action stop {e}'
+
+def docker_api_delete(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"delete","req_model":req_model})
+        res_json = response.json()
+        return res_json
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action delete {e}'
+
+
+def get_docker_container_list():
+    response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"list"})
+    res_json = response.json()
+
+    if response.status_code == 200:
+        return res_json
+    else:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'Error: {response.status_code}'
+
+docker_container_list = get_docker_container_list()
+
+
 with gr.Blocks() as app:
     gr.Markdown(
         """
         # Welcome!
-        Select a Hugging Face model and deploy it on a port
+        Download Hugging Face model and deploy
         
         **Note**: _[vLLM supported models list](https://docs.vllm.ai/en/latest/models/supported_models.html)_        
         """)
@@ -487,9 +363,9 @@ with gr.Blocks() as app:
         selected_model_gated = gr.Textbox(label="gated", visible=False)
         selected_model_downloads = gr.Textbox(label="downloads", visible=False)
     
-    selected_model_search_data = gr.Textbox(label="search_data", visible=False)
-    selected_model_hf_data = gr.Textbox(label="hf_data", visible=False)
-    selected_model_config_data = gr.Textbox(label="config_data", visible=False)
+    selected_model_search_data = gr.Textbox(label="search_data", visible=True)
+    selected_model_hf_data = gr.Textbox(label="hf_data", visible=True)
+    selected_model_config_data = gr.Textbox(label="config_data", visible=True)
     gr.Markdown(
         """
         <hr>
@@ -499,26 +375,14 @@ with gr.Blocks() as app:
     inp.submit(search_models, inputs=inp, outputs=[model_dropdown]).then(lambda: gr.update(visible=True), None, model_dropdown)
     btn.click(search_models, inputs=inp, outputs=[model_dropdown]).then(lambda: gr.update(visible=True), None, model_dropdown)
 
-    with gr.Row():
-        port_model = gr.Number(value=8001,visible=False,label="Port of model: ")
-        port_vllm = gr.Number(value=8000,visible=False,label="Port of vLLM: ")
-    
-    info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
-    
-        
-    generate_textbox = gr.Textbox(value="Put a prompt here", show_label=False, visible=True)
-            
-    out_generate = gr.Textbox(value="result", show_label=False, visible=True)
-    
-    
-    btn_dl = gr.Button("Download", visible=True)
-    btn_dl2 = gr.Button("Change Docker", visible=True)
-    btn_dl3 = gr.Button("Change vLLM", visible=True)
-    # btn_dl4 = gr.Button("Generate", visible=True)
-    
-    model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads],selected_model_container_name).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(lambda: gr.update(visible=True), None, selected_model_pipeline_tag).then(lambda: gr.update(visible=True), None, selected_model_transformers).then(lambda: gr.update(visible=True), None, selected_model_private).then(lambda: gr.update(visible=True), None, selected_model_downloads).then(lambda: gr.update(visible=True), None, selected_model_size).then(lambda: gr.update(visible=True), None, selected_model_gated).then(lambda: gr.update(visible=True), None, port_model).then(lambda current_value: current_value + 1, port_model, port_model).then(lambda: gr.update(visible=True), None, port_vllm).then(lambda current_value: current_value + 1, port_vllm, port_vllm).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl])
 
-    create_response = gr.Textbox(label="Building container...", show_label=True, visible=False)  
+    info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
+    btn_dl = gr.Button("Download", visible=False)
+    
+    model_dropdown.change(get_info, model_dropdown, [selected_model_search_data,selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_container_name]).then(get_additional_info, model_dropdown, [selected_model_hf_data, selected_model_config_data, selected_model_id, selected_model_size, selected_model_gated]).then(update_visibility_model_info, None, [selected_model_pipeline_tag, selected_model_transformers,selected_model_private,selected_model_downloads,selected_model_size,selected_model_gated]).then(gr_load_check, [selected_model_id,selected_model_pipeline_tag,selected_model_transformers,selected_model_private,selected_model_gated],[info_textbox,btn_dl]) 
+    
+
+    create_response = gr.Textbox(label="Create response...", show_label=True, visible=False)  
     timer_dl_box = gr.Textbox(label="Dowmload progress:", visible=False)
     
     btn_interface = gr.Button("Load Interface",visible=False)
@@ -529,46 +393,60 @@ with gr.Blocks() as app:
         else:
             gr.Interface.from_pipeline(pipeline(text_pipeline, model=text_model))
 
+
+
+
+
+
+
+
+
+
     gpu_dataframe = gr.Dataframe(label="GPU information")
     gpu_timer = gr.Timer(1,active=True)
     gpu_timer.tick(json_to_pd, outputs=gpu_dataframe)
     container_state = gr.State([])   
-    docker_container_list = docker_api('list','void')     
+    docker_container_list = get_docker_container_list()     
     @gr.render(inputs=container_state)
     def render_container(render_container_list):
-        docker_container_list = docker_api('list','void')
-        
-        docker_container_list_running = [c for c in docker_container_list if c["State"]["Status"] == "running" and c["name"] != 'container_redis' and c["name"] != 'container_backend' and c["name"] != 'container_frontend']
-        docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running" and c["name"] != 'container_redis' and c["name"] != 'container_backend' and c["name"] != 'container_frontend']
-        docker_container_list_bedrock = [c for c in docker_container_list if c["name"] == 'container_redis' or c["name"] == 'container_backend' or c["name"] == 'container_frontend']
+        docker_container_list = get_docker_container_list()
+        docker_container_list_running = [c for c in docker_container_list if c["State"]["Status"] == "running"]
+        docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
 
         def refresh_container():
             try:
                 global docker_container_list
-                response = requests.post(BACKEND_URL, json={"req_method": "list"})
+                response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method": "list"})
                 docker_container_list = response.json()
                 return docker_container_list
             
             except Exception as e:
-                logging.exception(f'Exception occured: {e}', exc_info=True)
+                print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
                 return f'err {str(e)}'
             
         gr.Markdown(f'### Container running ({len(docker_container_list_running)})')
 
         for current_container in docker_container_list_running:
-            with gr.Row():                
+            with gr.Row():
+                
                 container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container Id")
-                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")    
-                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")                
-                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")                
+                
+                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")              
+    
+                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")
+                
+                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")
+                
             with gr.Row():
                 container_log_out = gr.Textbox(value=[], lines=20, interactive=False, elem_classes="table-cell", show_label=False, visible=False)
+
             with gr.Row():            
                 logs_btn = gr.Button("Show Logs", scale=0)
-                logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
+                logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)     
+                
                 logs_btn.click(
-                    docker_api,
-                    inputs=['logs',container_id],
+                    docker_api_logs,
+                    inputs=[container_id],
                     outputs=[container_log_out]
                 ).then(
                     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
@@ -582,8 +460,8 @@ with gr.Blocks() as app:
                 delete_btn = gr.Button("Delete", scale=0, variant="stop")
 
                 stop_btn.click(
-                    docker_api,
-                    inputs=['stop',container_id],
+                    docker_api_stop,
+                    inputs=[container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -591,8 +469,8 @@ with gr.Blocks() as app:
                 )
 
                 delete_btn.click(
-                    docker_api,
-                    inputs=['delete',container_id],
+                    docker_api_delete,
+                    inputs=[container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -609,20 +487,26 @@ with gr.Blocks() as app:
         gr.Markdown(f'### Container not running ({len(docker_container_list_not_running)})')
 
         for current_container in docker_container_list_not_running:
-            with gr.Row():                
-                container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container ID")
-                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")    
-                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")                
-                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")            
             with gr.Row():
-                container_log_out = gr.Textbox(value=[], lines=20, interactive=False, elem_classes="table-cell", show_label=False, visible=False)                
+                
+                container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container ID")
+                
+                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")              
+    
+                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")
+                
+                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")
+            
+            with gr.Row():
+                container_log_out = gr.Textbox(value=[], lines=20, interactive=False, elem_classes="table-cell", show_label=False, visible=False)
+                
             with gr.Row():
                 logs_btn = gr.Button("Show Logs", scale=0)
                 logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
                 
                 logs_btn.click(
-                    docker_api,
-                    inputs=['logs',container_id],
+                    docker_api_logs,
+                    inputs=[container_id],
                     outputs=[container_log_out]
                 ).then(
                     lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
@@ -636,8 +520,8 @@ with gr.Blocks() as app:
                 delete_btn = gr.Button("Delete", scale=0, variant="stop")
 
                 start_btn.click(
-                    docker_api,
-                    inputs=['start',container_id],
+                    docker_api_start,
+                    inputs=[container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -645,61 +529,8 @@ with gr.Blocks() as app:
                 )
 
                 delete_btn.click(
-                    docker_api,
-                    inputs=['delete',container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-            
-            gr.Markdown(
-                """
-                <hr>
-                """
-            )
-            
-        gr.Markdown(f'### Bedrock Container ({len(docker_container_list_bedrock)})')
-
-        for current_container in docker_container_list_bedrock:
-            with gr.Row():                
-                container_id = gr.Textbox(value=current_container["Id"][:12], interactive=False, elem_classes="table-cell", label="Container ID")
-                container_name = gr.Textbox(value=current_container["Name"][1:], interactive=False, elem_classes="table-cell", label="Container Name")    
-                container_status = gr.Textbox(value=current_container["State"]["Status"], interactive=False, elem_classes="table-cell", label="Status")                
-                container_ports = gr.Textbox(value=next(iter(current_container["HostConfig"]["PortBindings"])), interactive=False, elem_classes="table-cell", label="Port")            
-            with gr.Row():
-                container_log_out = gr.Textbox(value=[], lines=20, interactive=False, elem_classes="table-cell", show_label=False, visible=False)                
-            with gr.Row():
-                logs_btn = gr.Button("Show Logs", scale=0)
-                logs_btn_close = gr.Button("Close Logs", scale=0, visible=False)
-                
-                logs_btn.click(
-                    load_log_file,
-                    inputs=[f'{container_name[1:]}', 20],
-                    outputs=[container_log_out]
-                ).then(
-                    lambda :[gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
-                
-                logs_btn_close.click(
-                    lambda :[gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)], None, [logs_btn,logs_btn_close, container_log_out]
-                )
-                                
-                start_btn = gr.Button("Start", scale=0)
-                delete_btn = gr.Button("Delete", scale=0, variant="stop")
-
-                start_btn.click(
-                    docker_api,
-                    inputs=["start",container_id],
-                    outputs=[container_state]
-                ).then(
-                    refresh_container,
-                    outputs=[container_state]
-                )
-
-                delete_btn.click(
-                    docker_api,
-                    inputs=["delete",container_id],
+                    docker_api_delete,
+                    inputs=[container_id],
                     outputs=[container_state]
                 ).then(
                     refresh_container,
@@ -722,25 +553,32 @@ with gr.Blocks() as app:
             print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
             return f'err {str(e)}'
                  
-    def check_container_running(container_name):
-        try:
-            docker_container_list = get_docker_container_list()
-            docker_container_list_running = [c for c in docker_container_list if c["name"] == container_name]
-            if len(docker_container_list_running) > 0:
-                return f'Yes container is running!'
-        except Exception as e:
-            print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
-            return f'err {str(e)}'
-    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     timer_dl = gr.Timer(1,active=False)
-    timer_dl.tick(docker_api_network, create_response, timer_dl_box)
-    
-    btn_dl.click(lambda: gr.update(label="Building vLLM container",visible=True), None, create_response).then(docker_api_create,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
-    
-    btn_dl2.click(lambda: gr.update(label="Building vLLM container 2",visible=True), None, create_response).then(docker_api_change,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)
-    
-    btn_dl3.click(lambda: gr.update(label="Building vLLM container 3",visible=True), None, create_response).then(docker_api_update,inputs=[model_dropdown,selected_model_pipeline_tag,port_model,port_vllm],outputs=create_response).then(refresh_container_list, outputs=[container_state]).then(lambda: gr.Timer(active=True), None, timer_dl).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.update(visible=True), None, btn_interface)    
-    
-    # btn_dl4.click(docker_api,['generate',generate_textbox],outputs=out_generate)
+    timer_dl.tick(get_download_speed, outputs=timer_dl_box)
+
+    btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
 
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
