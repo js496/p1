@@ -80,13 +80,15 @@ services:
       - ./vllm/logs:/var/log
       - /root/models:/root/.cache/huggingface/hub
     environment:
-      - MAX_JOBS=2
+      - MAX_JOBS=4
       - NCCL_DEBUG=INFO
       - CUDA_LAUNCH_BLOCKING=1
     command: [
       "--model", "Qwen/Qwen2.5-1.5B-Instruct",
       "--port", "1370",
+      "--max-model-len", "8192",
       "--tensor-parallel-size", "2",
+      "--swap-space", "2",
       "--gpu_memory_utilization", "0.95",
     ]
     restart: unless-stopped
