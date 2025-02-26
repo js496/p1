@@ -523,8 +523,8 @@ with gr.Blocks() as app:
     btn.click(search_models, inputs=inp, outputs=[model_dropdown]).then(lambda: gr.update(visible=True), None, model_dropdown)
     
     with gr.Row():
-        port_model = gr.Number(value=8001,visible=False,label="Port of model: ")
-        port_vllm = gr.Number(value=8000,visible=False,label="Port of vLLM: ")
+        port_model = gr.Number(value=8001,visible=True,label="Port of model: ")
+        port_vllm = gr.Number(value=8000,visible=True,label="Port of vLLM: ")
 
     info_textbox = gr.Textbox(value="Interface not possible for selected model. Try another model or check 'pipeline_tag', 'transformers', 'private', 'gated'", show_label=False, visible=False)
     btn_dl = gr.Button("Download", visible=False)

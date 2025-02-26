@@ -267,63 +267,12 @@ async def docker_rest(request: Request):
         if req_data["req_method"] == "change":
             try:
                 container_name = str(req_data["req_model"]).replace('/', '_')
-                res_db_gpu = await r.get('db_gpu')
-                if res_db_gpu is not None:
-                    db_gpu = json.loads(res_db_gpu)                    
-                                        
-                    # check if model already downloaded/downloading
-                    all_used_models = [g["used_models"] for g in db_gpu]
-                    print(f'all_used_models {all_used_models}')
-                    if req_data["req_model"] in all_used_models:
-                        return JSONResponse({"result": 302, "result_data": "Model already downloaded. Trying to start container ..."})
-                    
-                    # check if ports already used
-                    all_used_ports = [g["used_ports"] for g in db_gpu]
-                    print(f'all_used_ports {all_used_ports}')
-                    if req_data["req_port_vllm"] in all_used_ports or req_data["req_port_model"] in all_used_ports:
-                        return JSONResponse({"result": 409, "result_data": "Error: Port already in use"})
-                    
-                    # check if memory available
-                    current_gpu_info = get_gpu_info()
-                    if current_gpu_info[0]["mem_util"] > 50:
-                        all_running_models = [g["running_model"] for g in db_gpu]
-                        print(f'all_running_models {all_running_models}')
-                        for running_model in all_running_models:
-                            req_container = client.containers.get(req_data["req_model"])
-                            req_container.stop()
-                            req_container.wait()
-                            
-                    # get all used ports
-                    all_used_ports += [req_data["req_port_vllm"],req_data["req_port_model"]]
-                    all_used_models += [req_data["req_port_model"]]
-                    add_data = {
-                        "gpu": 0, 
-                        "gpu_info": "0",
-                        "running_model": str(container_name),
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": req_data["req_port_vllm"],
-                        "port_model": req_data["req_port_model"],
-                        "used_ports": str(all_used_ports),
-                        "used_models": str(all_used_models)
-                    }
-                    
-                    db_gpu += [add_data]
-                    await r.set('db_gpu', json.dumps(db_gpu))                
                 
-                else:
-                    add_data = {
-                        "gpu": 0, 
-                        "gpu_info": "0",
-                        "running_model": str(container_name),
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": str(req_data["req_port_vllm"]),
-                        "port_model": str(req_data["req_port_model"]),
-                        "used_ports": f'{str(req_data["req_port_vllm"])},{str(req_data["req_port_model"])}',
-                        "used_models": str(str(req_data["req_model"]))
-                    }
-                    await r.set('db_gpu', json.dumps(add_data))
-                        
-                
+                print("change stopping .-..")
+                req_container = client.containers.get(req_data["req_model"])
+                req_container.stop()
+                req_container.wait()
+                print("change wait done ..")
                 inspect_data = req_container.attrs
                 command = inspect_data['Config']['Cmd']
                 command_str = " ".join(command)
@@ -349,7 +298,6 @@ async def docker_rest(request: Request):
                 req_container.start(command=new_command)
                 print(f"Container '{container_name}' restarted with new settings.")
 
-                container_id = res_container.id
                 return JSONResponse({"result": 200, "result_data": str(f"Container '{container_name}' restarted with new settings.")})
 
             except Exception as e:
@@ -362,63 +310,7 @@ async def docker_rest(request: Request):
         if req_data["req_method"] == "update":
             try:
                 container_name = str(req_data["req_model"]).replace('/', '_')
-                res_db_gpu = await r.get('db_gpu')
-                if res_db_gpu is not None:
-                    db_gpu = json.loads(res_db_gpu)                    
-                                        
-                    # check if model already downloaded/downloading
-                    all_used_models = [g["used_models"] for g in db_gpu]
-                    print(f'all_used_models {all_used_models}')
-                    if req_data["req_model"] in all_used_models:
-                        return JSONResponse({"result": 302, "result_data": "Model already downloaded. Trying to start container ..."})
-                    
-                    # check if ports already used
-                    all_used_ports = [g["used_ports"] for g in db_gpu]
-                    print(f'all_used_ports {all_used_ports}')
-                    if req_data["req_port_vllm"] in all_used_ports or req_data["req_port_model"] in all_used_ports:
-                        return JSONResponse({"result": 409, "result_data": "Error: Port already in use"})
-                    
-                    # check if memory available
-                    current_gpu_info = get_gpu_info()
-                    if current_gpu_info[0]["mem_util"] > 50:
-                        all_running_models = [g["running_model"] for g in db_gpu]
-                        print(f'all_running_models {all_running_models}')
-                        for running_model in all_running_models:
-                            req_container = client.containers.get(req_data["req_model"])
-                            req_container.stop()
-                            req_container.wait()
-                            
-                    # get all used ports
-                    all_used_ports += [req_data["req_port_vllm"],req_data["req_port_model"]]
-                    all_used_models += [req_data["req_port_model"]]
-                    add_data = {
-                        "gpu": 0, 
-                        "gpu_info": "0",
-                        "running_model": str(container_name),
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": req_data["req_port_vllm"],
-                        "port_model": req_data["req_port_model"],
-                        "used_ports": str(all_used_ports),
-                        "used_models": str(all_used_models)
-                    }
-                    
-                    db_gpu += [add_data]
-                    await r.set('db_gpu', json.dumps(db_gpu))                
-                
-                else:
-                    add_data = {
-                        "gpu": 0, 
-                        "gpu_info": "0",
-                        "running_model": str(container_name),
-                        "timestamp": str(datetime.now()),
-                        "port_vllm": str(req_data["req_port_vllm"]),
-                        "port_model": str(req_data["req_port_model"]),
-                        "used_ports": f'{str(req_data["req_port_vllm"])},{str(req_data["req_port_model"])}',
-                        "used_models": str(str(req_data["req_model"]))
-                    }
-                    await r.set('db_gpu', json.dumps(add_data))
-                        
-                            
+        
                 global llm
                 llm = LLM(
                     model=req_data["req_model"],
