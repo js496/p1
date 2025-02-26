@@ -401,6 +401,24 @@ def docker_api_delete(req_model):
         print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
         return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action delete {e}'
 
+def docker_api_change(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_model":req_model})
+        res_json = response.json()
+        return res_json
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action delete {e}'
+
+def docker_api_update(req_model):
+    try:
+        response = requests.post(f'http://container_backend:{str(int(os.getenv("CONTAINER_PORT"))+1)}/dockerrest', json={"req_method":"change","req_model":req_model})
+        res_json = response.json()
+        return res_json
+    except Exception as e:
+        print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] {e}')
+        return f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] error action delete {e}'
+
 def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm):
     try:
         req_container_name = str(req_model).replace('/', '_')
@@ -675,8 +693,8 @@ with gr.Blocks() as app:
     timer_dl.tick(get_download_speed, outputs=timer_dl_box)
 
     btn_dl.click(lambda: gr.update(label="Starting download ...",visible=True), None, create_response).then(lambda: gr.update(visible=True), None, timer_dl_box).then(lambda: gr.Timer(active=True), None, timer_dl).then(download_from_hf_hub, model_dropdown, create_response).then(lambda: gr.Timer(active=False), None, timer_dl).then(lambda: gr.update(label="Download finished!"), None, create_response).then(lambda: gr.update(visible=True), None, btn_interface)
-    btn_dl2.click(docker_api, inputs=['change',model_dropdown], outputs=create_response)
-    btn_dl3.click(docker_api, inputs=['update',model_dropdown], outputs=create_response)
+    btn_dl2.click(docker_api_change, inputs=[model_dropdown], outputs=create_response)
+    btn_dl3.click(docker_api_update, inputs=[model_dropdown], outputs=create_response)
 
-
+                    
 app.launch(server_name="0.0.0.0", server_port=int(os.getenv("CONTAINER_PORT")))
