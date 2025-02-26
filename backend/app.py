@@ -266,10 +266,9 @@ async def docker_rest(request: Request):
 
         if req_data["req_method"] == "change":
             try:
-                container_name = str(req_data["req_model"]).replace('/', '_')
-                
                 print("change stopping .-..")
-                req_container = client.containers.get(req_data["req_model"])
+                req_container = client.containers.get("container_vllm")
+                print("got vllm???")
                 req_container.stop()
                 req_container.wait()
                 print("change wait done ..")
@@ -309,11 +308,11 @@ async def docker_rest(request: Request):
 
         if req_data["req_method"] == "update":
             try:
-                container_name = str(req_data["req_model"]).replace('/', '_')
-        
+                req_container_name = str(req_data["req_model"]).replace('/', '_')
+
                 global llm
                 llm = LLM(
-                    model=req_data["req_model"],
+                    model=f'./models/{req_container_name}',
                     tensor_parallel_size=1,
                     gpu_memory_utilization=0.80,
                 )

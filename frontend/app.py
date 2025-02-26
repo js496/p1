@@ -270,7 +270,7 @@ def download_from_hf_hub(selected_model_id):
         
         model_path = snapshot_download(
             repo_id=selected_model_id,
-            local_dir=f'/home/cloud/.cache/huggingface/hub/{model_id_path_default}'
+            local_dir=f'./models/{model_id_path_default}'
         )
         return f'download result: {model_path}'
     except Exception as e:
@@ -435,7 +435,7 @@ def docker_api_create(req_model, req_pipeline_tag, req_port_model, req_port_vllm
         
         new_entry = [{
             "gpu": 0,
-            "path": f'/home/cloud/.cache/huggingface/{req_model}',
+            "path": f'./models/{req_container_name}',
             "container": "0",
             "container_status": "0",
             "running_model": req_container_name,
