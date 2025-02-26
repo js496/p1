@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.4.0-runtime-ubuntu22.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ccache software-properties-common git curl wget sudo vim python3-pip \
-    python3-setuptools ffmpeg libsm6 libxext6 libgl1 libnccl2 libnccl-dev \
+    python3-setuptools ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
