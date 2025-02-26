@@ -427,12 +427,10 @@ with gr.Blocks() as app:
     @gr.render(inputs=container_state)
     def render_container(render_container_list):
         docker_container_list = docker_api('list','void')
-        [c for c in docker_container_list if c["State"]["Status"] == "running" and "name" in c and c["name"] not in ['container_redis', 'container_backend', 'container_frontend']]
-
         
         docker_container_list_running =  [c for c in docker_container_list if c["State"]["Status"] == "running"]
         docker_container_list_not_running = [c for c in docker_container_list if c["State"]["Status"] != "running"]
-        docker_container_list_bedrock =  [c for c in docker_container_list if c["State"]["Status"] == "running" and c["name"] in ['container_redis', 'container_backend', 'container_frontend']]
+        docker_container_list_bedrock =  [c for c in docker_container_list if c["State"]["Status"] == "running" and c["name"] in c and c["name"] in ['container_redis', 'container_backend', 'container_frontend']]
 
         def refresh_container():
             try:
