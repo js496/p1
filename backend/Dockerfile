@@ -23,9 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set up Python and pip
 RUN python3 -m pip install --upgrade pip
 
-# Install additional Python packages
 COPY requirements.txt .
-RUN python3 -m pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
+
+COPY . /usr/src/app
+WORKDIR /usr/src/app
 
 # Expose the port your app runs on
 EXPOSE 7861
