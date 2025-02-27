@@ -78,6 +78,7 @@ services:
     shm_size: 4gb
     environment:
       - NCCL_DEBUG=INFO
+      - NVCC_THREADS=2
     command: [
       "--model", "Qwen/Qwen2.5-1.5B-Instruct",
       "--port", "1370",

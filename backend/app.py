@@ -13,6 +13,8 @@ from datetime import datetime
 from contextlib import asynccontextmanager
 import pynvml
 from vllm import LLM, SamplingParams
+import torch
+from transformers import AutoModelForCausalLM
 
 r = redis.Redis(host="redis", port=6379, db=0)
 llm = None
@@ -319,11 +321,34 @@ async def docker_rest(request: Request):
                 model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
                 print(f'model_id_path_default {model_id_path_default}...')
                 
+                                
+                # Check available GPU memory
+                free_memory = torch.cuda.mem_get_info()[0] / (1024 ** 3)  # Free memory in GB
+                print(f'Available GPU memory: {free_memory:.2f} GB')
 
-                global llm
+                # Estimate model size
+                model = AutoModelForCausalLM.from_pretrained(req_data["req_model"], torch_dtype="auto")
+                model_size = sum(p.numel() * p.element_size() for p in model.parameters()) / (1024 ** 3)  # Size in GB
+                print(f'Model size: {model_size:.2f} GB')
+
+                if model_size > free_memory:                    
+                    return JSONResponse({"result": 404, "result_data": "Model is too large for available GPU memory"})
+
+                                        
+                # Unload the previous model
+                if 'llm' in globals():
+                    print('Unloading the previous model...')
+                    del llm  # Delete the LLM object
+                    torch.cuda.empty_cache()  # Free GPU memory
+
+                # Load the new model
+                print(f'Loading the new model: {req_data["req_model"]}...')
                 llm = LLM(
-                    model=req_data["req_model"]
+                    model=req_data["req_model"],
+                    tensor_parallel_size=4,  # Match the tensor-parallel-size in your Docker config
+                    gpu_memory_utilization=0.92  # Match the gpu_memory_utilization in your Docker config
                 )
+
                 
                 return JSONResponse({"result": 200, "result_data": "Model updated successfully"})
 
