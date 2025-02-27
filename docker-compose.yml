@@ -74,15 +74,13 @@ services:
     volumes:
       - ./vllm/logs:/var/log
       - /root/.cache/huggingface/hub:/root/.cache/huggingface/hub
-    shm_size: 4gb
+    icp: host
     environment:
       - NCCL_DEBUG=INFO
-      - NVCC_THREADS=2
     command: [
       "--model", "Qwen/Qwen2.5-1.5B-Instruct",
       "--port", "1370",
       "--tensor-parallel-size", "2",
-      "--pipeline-parallel-size", "1",
       "--gpu_memory_utilization", "0.95",
       "--max-model-len", "4096",
     ]

@@ -46,42 +46,43 @@ def get_gpu_info():
         return 0
 
 current_gpu_info = get_gpu_info()
-gpu_int_arr = [0]
+gpu_int_arr = [i for i in range(current_gpu_info["gpu_count"])]
 
 async def redis_timer():
     while True:
         try:
-            current_gpu_info = get_gpu_info()
-            res_db_gpu = await r.get('db_gpu')
-            if res_db_gpu is not None:
-                db_gpu = json.loads(res_db_gpu)
-                updated_gpu_data = []
-                for gpu_int in range(len(db_gpu)):
+            for gpu_i in gpu_int_arr:
+                current_gpu_info = get_gpu_info()
+                res_db_gpu = await r.get('db_gpu')
+                if res_db_gpu is not None:
+                    db_gpu = json.loads(res_db_gpu)
+                    updated_gpu_data = []
+                    for gpu_int in range(len(db_gpu)):
 
-                    update_data = {
-                        "gpu": gpu_int,
+                        update_data = {
+                            "gpu": str(gpu_i),
+                            "gpu_info": str(current_gpu_info),
+                            "running_model": db_gpu[gpu_int].get("running_model", "0"),
+                            "timestamp": str(datetime.now()),
+                            "port_vllm": db_gpu[gpu_int].get("port_vllm", "0"),
+                            "port_model": db_gpu[gpu_int].get("port_model", "0"),
+                            "used_ports": db_gpu[gpu_int].get("used_ports", "0"),
+                            "used_models": db_gpu[gpu_int].get("used_models", "0"),
+                        }
+                        updated_gpu_data.append(update_data)
+                    await r.set('db_gpu', json.dumps(updated_gpu_data))
+                else:
+                    update_data = [{
+                        "gpu": 0,
                         "gpu_info": str(current_gpu_info),
-                        "running_model": db_gpu[gpu_int].get("running_model", "0"),
+                        "running_model": "0",
                         "timestamp": str(datetime.now()),
-                        "port_vllm": db_gpu[gpu_int].get("port_vllm", "0"),
-                        "port_model": db_gpu[gpu_int].get("port_model", "0"),
-                        "used_ports": db_gpu[gpu_int].get("used_ports", "0"),
-                        "used_models": db_gpu[gpu_int].get("used_models", "0"),
-                    }
-                    updated_gpu_data.append(update_data)
-                await r.set('db_gpu', json.dumps(updated_gpu_data))
-            else:
-                update_data = [{
-                    "gpu": 0,
-                    "gpu_info": str(current_gpu_info),
-                    "running_model": "0",
-                    "timestamp": str(datetime.now()),
-                    "port_vllm": "0",
-                    "port_model": "0",
-                    "used_ports": "0",
-                    "used_models": "0",
-                }]
-                await r.set('db_gpu', json.dumps(update_data))
+                        "port_vllm": "0",
+                        "port_model": "0",
+                        "used_ports": "0",
+                        "used_models": "0",
+                    }]
+                    await r.set('db_gpu', json.dumps(update_data))
             await asyncio.sleep(0.2)
         except Exception as e:
             print(f'[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] Error: {e}')
