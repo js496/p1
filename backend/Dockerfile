@@ -1,4 +1,4 @@
-FROM vastai/base-image:cuda-11.8.0-cudnn8-devel-ubuntu22.04-py312
+FROM vastai/base-image:cuda-12.1.1-cudnn8-devel-ubuntu22.04
 
 
 # Support pipefail so we don't build broken images
