@@ -321,6 +321,14 @@ async def docker_rest(request: Request):
                 model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
                 print(f'model_id_path_default {model_id_path_default}...')
                 
+                
+                # Unload the previous model
+                if 'llm' in globals():
+                    print('Unloading the previous model...')
+                    del llm  # Delete the LLM object
+                    torch.cuda.empty_cache()  # Free GPU memory
+
+
                                 
                 # Check available GPU memory
                 free_memory = torch.cuda.mem_get_info()[0] / (1024 ** 3)  # Free memory in GB
@@ -334,13 +342,7 @@ async def docker_rest(request: Request):
                 if model_size > free_memory:                    
                     return JSONResponse({"result": 404, "result_data": "Model is too large for available GPU memory"})
 
-                                        
-                # Unload the previous model
-                if 'llm' in globals():
-                    print('Unloading the previous model...')
-                    del llm  # Delete the LLM object
-                    torch.cuda.empty_cache()  # Free GPU memory
-
+                        
                 # Load the new model
                 print(f'Loading the new model: {req_data["req_model"]}...')
                 llm = LLM(
