@@ -33,7 +33,7 @@ def get_gpu_info():
         mem_util = (mem_used / mem_total) * 100
 
         gpu_info.append({
-                "gpu_count": device_count,
+                "gpu_count": int(device_count),
                 "gpu_util": float(gpu_util),
                 "mem_used": float(mem_used),
                 "mem_total": float(mem_total),
@@ -46,6 +46,8 @@ def get_gpu_info():
         return 0
 
 current_gpu_info = get_gpu_info()
+print("current_gpu_info")
+print(current_gpu_info)
 gpu_int_arr = [i for i in range(current_gpu_info["gpu_count"])]
 
 async def redis_timer():
