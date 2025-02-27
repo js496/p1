@@ -321,7 +321,7 @@ async def docker_rest(request: Request):
                 model_id_path_default = f'models--{selected_model_id_arr[0]}--{selected_model_id_arr[1]}'
                 print(f'model_id_path_default {model_id_path_default}...')
                 
-                
+                global llm
                 # Unload the previous model
                 if 'llm' in globals():
                     print('Unloading the previous model...')
