@@ -347,7 +347,7 @@ async def docker_rest(request: Request):
                 print(f'Loading the new model: {req_data["req_model"]}...')
                 llm = LLM(
                     model=req_data["req_model"],
-                    tensor_parallel_size=4,  # Match the tensor-parallel-size in your Docker config
+                    tensor_parallel_size=2,  # Match the tensor-parallel-size in your Docker config
                     gpu_memory_utilization=0.92  # Match the gpu_memory_utilization in your Docker config
                 )
 
