@@ -48,8 +48,11 @@ def get_gpu_info():
 current_gpu_info = get_gpu_info()
 print("current_gpu_info")
 print(current_gpu_info)
-gpu_int_arr = [i for i in range(current_gpu_info["gpu_count"])]
-
+print("current_gpu_info[0]['gpu_count']")
+print(current_gpu_info[0]["gpu_count"])
+gpu_int_arr = [i for i in range(current_gpu_info[0]["gpu_count"])]
+print("gpu_int_arr")
+print(gpu_int_arr)
 async def redis_timer():
     while True:
         try:
