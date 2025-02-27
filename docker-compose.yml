@@ -17,6 +17,8 @@ services:
     container_name: container_backend
     environment:
       - CONTAINER_PORT=7861
+      - NCCL_DEBUG=INFO
+      - NVCC_THREADS=2
     volumes:      
       - ./backend:/usr/src/app
       - ./backend/logs:/var/log
@@ -57,9 +59,6 @@ services:
   vllm:
     build:
       context: ./vllm
-      args:
-        - CUDA_VERSION=12.4.1
-        - PYTHON_VERSION=3.12
     image: vllm/vllm-openai:latest
     runtime: nvidia
     deploy:
@@ -85,6 +84,6 @@ services:
       "--tensor-parallel-size", "4",
       "--pipeline-parallel-size", "1",
       "--gpu_memory_utilization", "0.95",
-      "--max-model-len", "8192",
+      "--max-model-len", "4096",
     ]
     restart: unless-stopped
