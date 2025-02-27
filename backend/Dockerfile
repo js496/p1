@@ -4,12 +4,6 @@ FROM vastai/base-image:cuda-11.8.0-cudnn8-devel-ubuntu22.04-py312
 # Support pipefail so we don't build broken images
 SHELL ["/bin/bash", "-c"]
 
-# Add some useful scripts and config files
-COPY ./ROOT/ /
-
-# Vast.ai environment variables used for Jupyter & Data sync
-ENV DATA_DIRECTORY=/workspace
-ENV WORKSPACE=/workspace
 
 # Ubuntu 24.04 requires this for compatibility with our /.launch script
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
@@ -119,7 +113,7 @@ RUN \
         fi \
     fi
     # Install OpenCL Runtimes
-    ARG TARGETARCH
+    ARG TARGETARCH=amd64
     RUN \
     set -euo pipefail && \
         if command -v rocm-smi >/dev/null 2>&1; then \
