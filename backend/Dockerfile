@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel
 
 
 # Support pipefail so we don't build broken images
