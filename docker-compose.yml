@@ -84,4 +84,3 @@ services:
       "--gpu_memory_utilization", "0.95",
       "--max-model-len", "4096",
     ]
-    restart: unless-stopped
